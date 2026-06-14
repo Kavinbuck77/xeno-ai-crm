@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const apiUrl = "http://localhost:8080";
+const apiUrl = "https://xeno-crm-service.onrender.com";
 
 function Dashboard() {
   const [customers, setCustomers] = useState([]);
