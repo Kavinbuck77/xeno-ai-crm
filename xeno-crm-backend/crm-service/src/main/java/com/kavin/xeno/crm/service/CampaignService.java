@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,6 +23,9 @@ public class CampaignService {
     private final CustomerRepository customerRepository;
     private final CommunicationRepository communicationRepository;
     private final RestTemplate restTemplate;
+
+    @Value("${channel.service.url}")
+    private String channelServiceUrl;
 
     public CampaignService(
             CampaignRepository campaignRepository,
@@ -74,7 +78,7 @@ public class CampaignService {
             request.put("channel", campaign.getChannel());
 
             restTemplate.postForObject(
-                    "http://localhost:8081/send",
+                    channelServiceUrl + "/send",
                     request,
                     String.class
             );
