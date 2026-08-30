@@ -1,5 +1,6 @@
 package com.kavin.xeno.crm.controller;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kavin.xeno.crm.entity.Communication;
+import com.kavin.xeno.crm.entity.CommunicationStatus;
 import com.kavin.xeno.crm.service.CommunicationService;
 
 @RestController
@@ -25,26 +27,43 @@ public class ReceiptController {
 
     @PostMapping
     public String receiveReceipt(@RequestBody Map<String, Object> payload) {
-
-        Long campaignId = payload.containsKey("campaignId")
+        Long campaignId = payload.containsKey("campaignId") && payload.get("campaignId") != null
                 ? ((Number) payload.get("campaignId")).longValue()
                 : null;
-        Long customerId = payload.containsKey("customerId")
+        Long customerId = payload.containsKey("customerId") && payload.get("customerId") != null
                 ? ((Number) payload.get("customerId")).longValue()
                 : null;
-        String status = payload.containsKey("status")
-                ? payload.get("status").toString()
+        String statusStr = payload.containsKey("status") && payload.get("status") != null
+                ? payload.get("status").toString().toUpperCase()
                 : "DELIVERED";
+        String errorMessage = payload.containsKey("errorMessage") && payload.get("errorMessage") != null
+                ? payload.get("errorMessage").toString()
+                : null;
 
         if (campaignId != null && customerId != null) {
             Optional<Communication> existing = communicationService
                     .findByCampaignIdAndCustomerId(campaignId, customerId);
 
-            Communication communication = existing.orElseGet(Communication::new);
-            communication.setCampaignId(campaignId);
-            communication.setCustomerId(customerId);
-            communication.setStatus(status);
-            communicationService.saveCommunication(communication);
+            if (existing.isPresent()) {
+                Communication communication = existing.get();
+                try {
+                    CommunicationStatus status = CommunicationStatus.valueOf(statusStr);
+                    communication.setStatus(status);
+                    
+                    if (status == CommunicationStatus.DELIVERED || status == CommunicationStatus.FAILED) {
+                        communication.setDeliveredAt(LocalDateTime.now());
+                    }
+                    if (status == CommunicationStatus.FAILED) {
+                        communication.setErrorMessage(errorMessage);
+                    }
+                    
+                    communicationService.saveCommunication(communication);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Invalid communication status received in callback: " + statusStr);
+                }
+            } else {
+                System.err.println("No existing communication record found for campaignId " + campaignId + " and customerId " + customerId);
+            }
         }
 
         System.out.println("=================================");

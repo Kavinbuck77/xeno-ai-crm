@@ -1,5 +1,7 @@
 package com.kavin.xeno.crm.entity;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,19 +22,22 @@ public class Customer {
 
     private Double totalSpent;
 
-    private String lastOrderDate;
+    private LocalDate lastOrderDate;
+
+    private Long userId;
 
     public Customer() {
     }
 
     public Customer(Long id, String name, String email, String phone,
-                    Double totalSpent, String lastOrderDate) {
+                    Double totalSpent, LocalDate lastOrderDate, Long userId) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.totalSpent = totalSpent;
         this.lastOrderDate = lastOrderDate;
+        this.userId = userId;
     }
 
     public Long getId() {
@@ -75,11 +80,19 @@ public class Customer {
         this.totalSpent = totalSpent;
     }
 
-    public String getLastOrderDate() {
+    public LocalDate getLastOrderDate() {
         return lastOrderDate;
     }
 
-    public void setLastOrderDate(String lastOrderDate) {
+    public void setLastOrderDate(LocalDate lastOrderDate) {
         this.lastOrderDate = lastOrderDate;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

@@ -1,6 +1,11 @@
 package com.kavin.xeno.crm.entity;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,7 +21,17 @@ public class Communication {
 
     private Long customerId;
 
-    private String status;
+    private String channel;
+
+    @Enumerated(EnumType.STRING)
+    private CommunicationStatus status;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime deliveredAt;
+
+    @Column(length = 1000)
+    private String errorMessage;
 
     public Communication() {
     }
@@ -45,11 +60,43 @@ public class Communication {
         this.customerId = customerId;
     }
 
-    public String getStatus() {
+    public String getChannel() {
+        return channel;
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
+
+    public CommunicationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(CommunicationStatus status) {
         this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getDeliveredAt() {
+        return deliveredAt;
+    }
+
+    public void setDeliveredAt(LocalDateTime deliveredAt) {
+        this.deliveredAt = deliveredAt;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 }

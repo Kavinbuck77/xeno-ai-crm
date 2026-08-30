@@ -22,8 +22,8 @@ public class AiController {
     }
 
     @PostMapping("/generate-campaign")
-    public Map<String, String> generateCampaign(
-            @RequestBody Map<String,String> request) {
+    public Map<String, Object> generateCampaign(
+            @RequestBody Map<String, String> request) {
 
         return aiCampaignService.generateCampaign(
                 request.get("goal")

@@ -26,6 +26,13 @@ public class Campaign {
 
     private LocalDateTime createdAt;
 
+    private Long userId;
+
+    private String segmentType;
+
+    @Column(columnDefinition = "TEXT")
+    private String segmentCriteriaJson;
+
     public Campaign() {
     }
 
@@ -75,5 +82,29 @@ public class Campaign {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getSegmentType() {
+        return segmentType;
+    }
+
+    public void setSegmentType(String segmentType) {
+        this.segmentType = segmentType;
+    }
+
+    public String getSegmentCriteriaJson() {
+        return segmentCriteriaJson;
+    }
+
+    public void setSegmentCriteriaJson(String segmentCriteriaJson) {
+        this.segmentCriteriaJson = segmentCriteriaJson;
     }
 }

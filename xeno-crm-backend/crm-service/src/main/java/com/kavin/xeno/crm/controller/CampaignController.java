@@ -1,7 +1,9 @@
 package com.kavin.xeno.crm.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,8 +36,23 @@ public class CampaignController {
         return campaignService.getAllCampaigns();
     }
 
+    @GetMapping("/{id}")
+    public Campaign getCampaignById(@PathVariable Long id) {
+        return campaignService.getCampaignById(id);
+    }
+
     @PostMapping("/{id}/launch")
-    public String launchCampaign(@PathVariable Long id) {
-        return campaignService.launchCampaign(id);
+    public ResponseEntity<Map<String, Object>> launchCampaign(@PathVariable Long id) {
+        return ResponseEntity.ok(campaignService.launchCampaign(id));
+    }
+
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<Map<String, Object>> getCampaignAnalytics(@PathVariable Long id) {
+        return ResponseEntity.ok(campaignService.getCampaignAnalytics(id));
+    }
+
+    @GetMapping("/{id}/recipients")
+    public ResponseEntity<List<Map<String, Object>>> getCampaignRecipients(@PathVariable Long id) {
+        return ResponseEntity.ok(campaignService.getCampaignRecipients(id));
     }
 }
