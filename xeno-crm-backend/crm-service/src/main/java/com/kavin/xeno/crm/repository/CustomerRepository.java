@@ -18,11 +18,19 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     List<Customer> findByUserIdAndLastOrderDateBefore(Long userId, LocalDate thresholdDate);
 
+    List<Customer> findByUserIdAndTotalSpentGreaterThan(Long userId, Double totalSpent);
+
     List<Customer> findByUserIdAndTotalSpentGreaterThanEqual(Long userId, Double minTotalSpent);
+
+    List<Customer> findByUserIdAndTotalSpentLessThan(Long userId, Double totalSpent);
+
+    List<Customer> findByUserIdAndTotalSpentLessThanEqual(Long userId, Double totalSpent);
 
     List<Customer> findByUserIdAndLastOrderDateGreaterThanEqual(Long userId, LocalDate thresholdDate);
 
     List<Customer> findByUserIdAndTotalSpentBetween(Long userId, Double minTotalSpent, Double maxTotalSpent);
 
     List<Customer> findByUserIdAndLastOrderDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    List<Customer> findByUserIdAndTotalSpent(Long userId, Double totalSpent);
 }

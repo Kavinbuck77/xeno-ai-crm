@@ -231,8 +231,18 @@ function CampaignStudio() {
                 </div>
                 <div className="reco-item">
                   <span className="reco-label">Estimated Recipients</span>
-                  <span className="reco-value reco-recipients">{recommendation.recipientCount} customers</span>
+                  <span className={`reco-value reco-recipients ${recommendation.recipientCount === 0 ? 'text-danger' : ''}`}>
+                    {recommendation.recipientCount} customers
+                  </span>
                 </div>
+                
+                {recommendation.recipientCount === 0 && (
+                  <div className="reco-item full-width" style={{ marginTop: 8 }}>
+                    <div className="auth-error" style={{ margin: 0, padding: '8px 12px', fontSize: 13 }}>
+                      ⚠️ No customers match this audience criteria. Launching is disabled for 0 recipients.
+                    </div>
+                  </div>
+                )}
                 
                 <div className="reco-item full-width">
                   <span className="reco-label">Inactivity/Spend Thresholds</span>

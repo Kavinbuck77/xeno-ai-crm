@@ -35,9 +35,23 @@ function Register() {
       }, 2000);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.error || "Registration failed. Username may already be taken."
-      );
+      if (err.response) {
+        // Server responded with an error status
+        const status = err.response.status;
+        const serverError = err.response.data?.error;
+        if (status === 409) {
+          setError(serverError || "Username is already taken.");
+        } else if (status === 400) {
+          setError(serverError || "Invalid input. Please check your fields.");
+        } else {
+          setError(serverError || "Server error. Please try again later.");
+        }
+      } else if (err.request) {
+        // Request was sent but no response received (network error)
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
       setLoading(false);
     }
   };

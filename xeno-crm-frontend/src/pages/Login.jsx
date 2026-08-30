@@ -24,9 +24,15 @@ function Login() {
       navigate("/");
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.error || "Invalid username or password. Please try again."
-      );
+      if (err.response) {
+        setError(
+          err.response.data?.error || "Invalid username or password. Please try again."
+        );
+      } else if (err.request) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

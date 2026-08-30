@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.kavin.xeno.crm.entity.Customer;
+import com.kavin.xeno.crm.entity.SpendOperator;
 import com.kavin.xeno.crm.exception.AiGenerationException;
 import com.kavin.xeno.crm.security.SecurityUtils;
 
@@ -46,7 +47,17 @@ public class AiCampaignService {
             "HIGH_VALUE_CUSTOMERS",
             "RECENT_CUSTOMERS",
             "CUSTOM_SPENDING_RANGE",
-            "CUSTOM_INACTIVITY_RANGE"
+            "CUSTOM_INACTIVITY_RANGE",
+            "EXACT_SPENDING"
+    );
+
+    private static final List<String> ALLOWED_SPEND_OPERATORS = List.of(
+            "GREATER_THAN",
+            "GREATER_THAN_OR_EQUAL",
+            "LESS_THAN",
+            "LESS_THAN_OR_EQUAL",
+            "EQUAL",
+            "BETWEEN"
     );
 
     private static final List<String> ALLOWED_CHANNELS = List.of("EMAIL", "WHATSAPP", "SMS", "PUSH");
@@ -130,6 +141,33 @@ public class AiCampaignService {
                 - Keep the campaign name short (under 5 words).
                 - Keep the message under 40 words.
 
+                CRITICAL SEMANTIC OPERATOR RULES FOR SPENDING CRITERIA:
+                When a user goal mentions customer spending, you MUST populate "spendOperator" and "spendValue" inside criteria.
+
+                Choose the exact spendOperator based on natural language keywords:
+                1. "more than X", "greater than X", "above X", "higher than X", "exceeding X"
+                   → spendOperator: "GREATER_THAN", spendValue: X
+                2. "at least X", "minimum X", "X or more", "from X"
+                   → spendOperator: "GREATER_THAN_OR_EQUAL", spendValue: X
+                3. "less than X", "below X", "under X"
+                   → spendOperator: "LESS_THAN", spendValue: X
+                4. "at most X", "maximum X", "X or less"
+                   → spendOperator: "LESS_THAN_OR_EQUAL", spendValue: X
+                5. "exactly X", "equal to X", "spent X dollars" (exact amount)
+                   → spendOperator: "EQUAL", spendValue: X
+                6. "between X and Y", "from X to Y"
+                   → spendOperator: "BETWEEN", spendValue: X, maxSpendValue: Y
+
+                EXAMPLES:
+                - "bring customers who spent more than 1500 dollars"
+                  → criteria: { "spendOperator": "GREATER_THAN", "spendValue": 1500 }
+                - "customers who spent exactly 1000 dollars"
+                  → criteria: { "spendOperator": "EQUAL", "spendValue": 1000 }
+                - "customers who spent at least 1500 dollars"
+                  → criteria: { "spendOperator": "GREATER_THAN_OR_EQUAL", "spendValue": 1500 }
+                - "customers who spent between 1000 and 1500 dollars"
+                  → criteria: { "spendOperator": "BETWEEN", "spendValue": 1000, "maxSpendValue": 1500 }
+
                 Allowed segmentType values:
                 ALL_CUSTOMERS
                 DORMANT_CUSTOMERS
@@ -137,6 +175,7 @@ public class AiCampaignService {
                 RECENT_CUSTOMERS
                 CUSTOM_SPENDING_RANGE
                 CUSTOM_INACTIVITY_RANGE
+                EXACT_SPENDING
 
                 Allowed channel values:
                 EMAIL
@@ -148,12 +187,13 @@ public class AiCampaignService {
 
                 {
                   "name": "Short campaign name",
-                  "segmentType": "DORMANT_CUSTOMERS",
+                  "segmentType": "CUSTOM_SPENDING_RANGE",
                   "criteria": {
-                    "daysSinceLastOrder": 180
+                    "spendOperator": "GREATER_THAN",
+                    "spendValue": 1500
                   },
                   "channel": "EMAIL",
-                  "message": "We miss you! Get 20% off your next order."
+                  "message": "Exclusive offer for our VIP shoppers!"
                 }
 
                 Marketing goal:
@@ -162,9 +202,11 @@ public class AiCampaignService {
 
     private String buildCompactRetryPrompt(String goal) {
         return "Return ONLY a compact single-line JSON object with keys: name, segmentType, criteria, channel, message. " +
-                "segmentType must be one of: ALL_CUSTOMERS, DORMANT_CUSTOMERS, HIGH_VALUE_CUSTOMERS, RECENT_CUSTOMERS, CUSTOM_SPENDING_RANGE, CUSTOM_INACTIVITY_RANGE. " +
+                "segmentType must be one of: ALL_CUSTOMERS, DORMANT_CUSTOMERS, HIGH_VALUE_CUSTOMERS, RECENT_CUSTOMERS, CUSTOM_SPENDING_RANGE, CUSTOM_INACTIVITY_RANGE, EXACT_SPENDING. " +
                 "channel must be one of: EMAIL, WHATSAPP, SMS, PUSH. " +
-                "criteria is an object with relevant numeric thresholds. " +
+                "criteria must include spendOperator and spendValue for spending goals. " +
+                "spendOperator values: GREATER_THAN (>), GREATER_THAN_OR_EQUAL (>=), LESS_THAN (<), LESS_THAN_OR_EQUAL (<=), EQUAL (==), BETWEEN. " +
+                "EXACT RULES: 'more than 1500' -> GREATER_THAN. 'at least 1500' -> GREATER_THAN_OR_EQUAL. 'exactly 1000' -> EQUAL. 'less than 1500' -> LESS_THAN. " +
                 "No markdown. No explanation. Only JSON. " +
                 "Goal: " + goal;
     }
@@ -291,6 +333,24 @@ public class AiCampaignService {
         // criteria properties
         JsonObject criteriaProperties = new JsonObject();
 
+        JsonObject spendOperatorProp = new JsonObject();
+        spendOperatorProp.addProperty("type", "STRING");
+        spendOperatorProp.addProperty("description", "Operator for spending filtering: GREATER_THAN (>), GREATER_THAN_OR_EQUAL (>=), LESS_THAN (<), LESS_THAN_OR_EQUAL (<=), EQUAL (==), BETWEEN");
+        JsonArray operatorEnum = new JsonArray();
+        ALLOWED_SPEND_OPERATORS.forEach(operatorEnum::add);
+        spendOperatorProp.add("enum", operatorEnum);
+        criteriaProperties.add("spendOperator", spendOperatorProp);
+
+        JsonObject spendValueProp = new JsonObject();
+        spendValueProp.addProperty("type", "NUMBER");
+        spendValueProp.addProperty("description", "Primary numeric spend threshold for spendOperator filtering");
+        criteriaProperties.add("spendValue", spendValueProp);
+
+        JsonObject maxSpendValueProp = new JsonObject();
+        maxSpendValueProp.addProperty("type", "NUMBER");
+        maxSpendValueProp.addProperty("description", "Upper numeric spend threshold used ONLY when spendOperator is BETWEEN");
+        criteriaProperties.add("maxSpendValue", maxSpendValueProp);
+
         JsonObject daysSince = new JsonObject();
         daysSince.addProperty("type", "INTEGER");
         daysSince.addProperty("description", "Days since last order for dormant/recent segments");
@@ -298,13 +358,18 @@ public class AiCampaignService {
 
         JsonObject minSpent = new JsonObject();
         minSpent.addProperty("type", "NUMBER");
-        minSpent.addProperty("description", "Minimum total spent for high value segments");
+        minSpent.addProperty("description", "Minimum total spent fallback");
         criteriaProperties.add("minTotalSpent", minSpent);
 
         JsonObject maxSpent = new JsonObject();
         maxSpent.addProperty("type", "NUMBER");
-        maxSpent.addProperty("description", "Maximum total spent for spending range segments");
+        maxSpent.addProperty("description", "Maximum total spent fallback");
         criteriaProperties.add("maxTotalSpent", maxSpent);
+
+        JsonObject exactSpent = new JsonObject();
+        exactSpent.addProperty("type", "NUMBER");
+        exactSpent.addProperty("description", "Exact total spent fallback");
+        criteriaProperties.add("exactTotalSpent", exactSpent);
 
         JsonObject minInactivity = new JsonObject();
         minInactivity.addProperty("type", "INTEGER");
@@ -429,6 +494,17 @@ public class AiCampaignService {
                         criteria.put(key, criteriaObj.get(key).getAsString());
                     }
                 }
+            }
+        }
+
+        // Validate and normalize spendOperator if present
+        if (criteria.containsKey("spendOperator")) {
+            String rawOp = String.valueOf(criteria.get("spendOperator"));
+            SpendOperator op = SpendOperator.fromString(rawOp);
+            if (op != null) {
+                criteria.put("spendOperator", op.name());
+            } else {
+                criteria.remove("spendOperator");
             }
         }
 

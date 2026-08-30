@@ -76,14 +76,20 @@ public class CampaignService {
             throw new IllegalArgumentException("Only campaigns in DRAFT status can be launched");
         }
 
-        // 2. Resolve recipients based on segment criteria
+        // 2. Idempotency check: ensure no communications already exist for this campaign
+        long existingCount = communicationRepository.countByCampaignId(campaignId);
+        if (existingCount > 0) {
+            throw new IllegalArgumentException("Campaign has already been dispatched. " + existingCount + " communications exist.");
+        }
+
+        // 3. Resolve recipients based on segment criteria
         List<Customer> recipients = segmentationService.resolveRecipients(userId, campaign.getSegmentType(), campaign.getSegmentCriteriaJson());
 
         if (recipients.isEmpty()) {
-            throw new IllegalArgumentException("No eligible customers found for the campaign segment");
+            throw new IllegalArgumentException("No customers match this audience criteria.");
         }
 
-        // 3. Create QUEUED communication records
+        // 4. Create QUEUED communication records
         List<Communication> communications = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (Customer customer : recipients) {
@@ -98,14 +104,17 @@ public class CampaignService {
         
         List<Communication> savedCommunications = communicationRepository.saveAll(communications);
 
-        // 4. Update campaign status to RUNNING
+        // 5. Update campaign status to RUNNING
         campaign.setStatus("RUNNING");
         campaignRepository.save(campaign);
 
-        // 5. Trigger asynchronous dispatch execution
-        campaignDispatcher.dispatch(campaign, savedCommunications);
+        // 6. Extract IDs and trigger asynchronous dispatch (pass IDs, not managed entities)
+        List<Long> communicationIds = savedCommunications.stream()
+                .map(Communication::getId)
+                .collect(java.util.stream.Collectors.toList());
+        campaignDispatcher.dispatch(campaignId, communicationIds);
 
-        // 6. Return response immediately
+        // 7. Return response immediately
         Map<String, Object> response = new HashMap<>();
         response.put("status", "QUEUED");
         response.put("recipientCount", savedCommunications.size());
